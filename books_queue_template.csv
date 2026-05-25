@@ -1,0 +1,3 @@
+'''This is a template CSV file for the books queue. It contains the headers for the columns 
+that will be populated with data collected from the Goodreads "Best Books Ever" list.'''
+book_id,title,url,status
