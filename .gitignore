@@ -1,6 +1,8 @@
-venv/
-env/
 __pycache__/
 *.pyc
-# Data outputs
+data/raw/
+data/processed/
+venv/
 books_queue.csv
+Notes.md
+make_tree.py
