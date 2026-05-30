@@ -1,38 +1,13 @@
-import os
 import csv
 import asyncio
 import random
 from pathlib import Path
 from playwright.async_api import async_playwright, TimeoutError
+# Import your cleanly isolated configuration module from your project path
+from src.config import PipelineConfig
 
 # =====================================================================
-# 1. CONFIGURATION LAYER (Separation of Concerns: Constants Only)
-# =====================================================================
-class PipelineConfig:
-    """Stores all immutable system variables, directory paths, and CSS selectors."""
-    
-    # Dynamic Absolute Path Resolution (Safe execution from any folder)
-    ROOT_DIR = Path(__file__).resolve().parents[1]
-    QUEUE_CSV_PATH = ROOT_DIR / "books_queue.csv"
-    RAW_DATA_DIR = ROOT_DIR / "data" / "raw"
-    
-    # Anti-Bot & Network Defense Settings
-    USER_AGENT = (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    )
-    
-    # Targeted Goodreads Elements
-    POPUP_CLOSE_SELECTOR = ".Overlay__close"
-    
-    # Strict Network Latency Guardrails (in Milliseconds)
-    PRIMARY_TIMEOUT_MS = 60000  # 60 Seconds
-    FALLBACK_TIMEOUT_MS = 90000 # 90 Seconds
-
-
-# =====================================================================
-# 2. JOB QUEUE CONTROLLER (Your Validated Queue Logic)
+# 2. JOB QUEUE CONTROLLER (Validated Queue Logic)
 # =====================================================================
 def get_pending_books(queue_file: Path) -> list:
     """Reads the centralized tracking queue and extracts all pending operations."""
@@ -66,11 +41,12 @@ class GoodreadsScraper:
         self.context = None
         self.page = None
 
+    # --- New Method: Initialization with Immediate Defense Arming ---
     async def initialize_pipeline(self, playwright_instance) -> None:
         """Launches the sandboxed browser environment and configures human traits."""
         print("🌐 Launching automated browser instance...")
         
-        # Headless=False allows you to visually audit your defenses during runtime
+        # Headless=False allows you to visually audit  defenses during runtime
         self.browser = await playwright_instance.chromium.launch(headless=False)
         
         # Inject standard human fingerprint (User Agent) to clear low-level firewalls
@@ -80,6 +56,7 @@ class GoodreadsScraper:
         # IMMEDIATELY arm the pop-up defense system right after launching the page
         await self._register_popup_defense()
 
+    # --- New Method: Proactive Pop-up Interception System ---
     async def _register_popup_defense(self) -> None:
         """Registers a low-level asynchronous listener in Playwright's engine.
 
@@ -87,6 +64,7 @@ class GoodreadsScraper:
         """
         popup_locator = self.page.locator(self.config.POPUP_CLOSE_SELECTOR)
         
+        # Define the asynchronous callback function that will execute when the pop-up is detected
         async def dismiss_popup(blocking_element):
             print("\n🛡️  [Pop-up Interceptor] Goodreads registration window detected! Intercepting...")
             try:
@@ -102,6 +80,7 @@ class GoodreadsScraper:
         await self.page.add_locator_handler(popup_locator, dismiss_popup)
         print("🛡️  [System Status] Continuous background pop-up interceptor successfully armed.")
 
+    # --- New Method: Dual-Layered Navigation with Human Mimicking ---
     async def navigate_to_book(self, book_url: str) -> bool:
         """Executes a dual-layered, fault-tolerant navigation to the book landing page.
 
@@ -140,11 +119,45 @@ class GoodreadsScraper:
         
         return True
 
+    # --- New Method: Resource Management Layer ---
     async def close_pipeline(self) -> None:
         """Safely deallocates browser memory buffers and stops all threads."""
         if self.browser:
             print("\n🛑 Shutting down browser resources and safely closing down connection channels.")
             await self.browser.close()
+    
+    # --- New Method: Filter Interaction Layer ---
+    async def trigger_filter_popup(self) -> bool:
+        """Locates and clicks the primary review filters control button 
+        to expose the filter configurations menu.
+        """
+        print("🔍 [Interaction] Locating the review filter controls...")
+        try:
+            # Create locator for the button and filter context using the config blueprint
+            filter_btn = self.page.locator(self.config.FILTER_BUTTON_SELECTOR)
+            
+            # Wait until the element is attached to the layout and ready to receive pointer events
+            await filter_btn.wait_for(state="visible", timeout=15000)
+            
+            # Additional assertion: Ensure it contains the expected text label before execution
+            button_text = await filter_btn.inner_text()
+            if "Filters" in button_text:
+                print(f"🎯 [Interaction] Verified button label: '{button_text.strip()}'. Clicking filter trigger...")
+                await filter_btn.click()
+                
+                # Add a brief, natural delay for the DOM to process the click event and paint the popup
+                await asyncio.sleep(random.uniform(1.5, 2.5))
+                return True
+            else:
+                print(f"⚠️ [Interaction Warning] Selector found, but unexpected text context: '{button_text}'")
+                return False
+                
+        except TimeoutError:
+            print("❌ [Interaction Error] The Filter button could not be resolved or was hidden within timeout limits.")
+            return False
+        except Exception as e:
+            print(f"❌ [Interaction Error] Failed to interact with filter section: {str(e)}")
+            return False
 
 
 # =====================================================================
@@ -162,27 +175,58 @@ async def main():
         print("⚠️  No pending operations inside queue. Pipeline execution aborted.")
         return
         
-    # Extract the absolute first record to test our navigation & defense layers cleanly
-    sample_book = queue[0]
-    sample_title = sample_book.get("Book Title", "").strip()
-    sample_url = sample_book.get("URL", "").strip()
-    
-    print(f"\n🎯 [Target Acquired] Preparing evaluation run for: '{sample_title}'")
+    # Extract exactly 3 books to test our interactive filter block layer cleanly
+    test_batch = queue[:3]
+    print(f"🚀 [Pipeline Batch] Extracted up to {len(test_batch)} books for interactive testing cycle.")
     
     # Initialize Context-Managed Async Playwright Engine
     async with async_playwright() as p:
         scraper = GoodreadsScraper(config)
         await scraper.initialize_pipeline(p)
         
-        # Test navigation runtime, error handlings, and interceptor status
-        success = await scraper.navigate_to_book(sample_url)
-        
-        if success:
-            print("\n🏁 Validation Success! Your initialization, defense, and navigation blocks are rock-solid.")
-        else:
-            print("\n❌ Validation Failed! Review your internet connectivity or selector health.")
+        try:
+            for index, book in enumerate(test_batch, start=1):
+                book_title = book.get("Book Title", "").strip() or f"Book Reference #{index}"
+                book_url = book.get("URL", "").strip()
+                
+                print(f"\n📖 [Processing {index}/{len(test_batch)}]: '{book_title}'")
+                print(f"🔗 URL: {book_url}")
+                
+                # Test navigation runtime, error handlings, and interceptor status
+                navigation_success = await scraper.navigate_to_book(book_url)
+                
+                if navigation_success:
+                    # Apply an immediate localized human simulation pacing delay upon successful load
+                    human_delay = random.uniform(2.5, 4.5)
+                    print(f"⏳ [Defense] Applying behavioral delay of {human_delay:.2f}s...")
+                    await asyncio.sleep(human_delay)
+                    
+                    # NEW LAYER INTEGRATION: Trigger the filter pop-up panel context
+                    filter_success = await scraper.trigger_filter_popup()
+                    
+                    if filter_success:
+                        print(f"✅ [Milestone] Filter menu opened successfully for book: '{book_title}'")
+                        # (Next developmental checkpoint will introduce options modal interaction here)
+                    else:
+                        print(f"❌ [Milestone Failed] Could not trigger filter menu for book: '{book_title}'")
+                else:
+                    print(f"❌ Navigation Failed! Skipping execution loops for this target record.")
+                
+                # Apply a cooldown delay between distinct book transactions to protect IP footprint
+                if index < len(test_batch):
+                    cooldown = random.uniform(3.0, 5.0)
+                    print(f"⏳ [Cooldown] Waiting {cooldown:.2f}s before moving to next target book...")
+                    await asyncio.sleep(cooldown)
+                    
+            print("\n🏁 Batch Run Complete! Review your terminal execution logs for filter confirmation.")
             
-        await scraper.close_pipeline()
+        except Exception as e:
+            print(f"💥 [Critical Exception] Unexpected error caught inside orchestrator: {str(e)}")
+            
+        finally:
+            # Guarantee resources clean up execution context regardless of loop breaks
+            print("\n🔒 [Shutdown] Closing pipeline context safely.")
+            await scraper.close_pipeline()
 
 if __name__ == "__main__":
     asyncio.run(main())
