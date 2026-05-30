@@ -40,8 +40,9 @@ class GoodreadsScraper:
         self.browser = None
         self.context = None
         self.page = None
-
+    
     # --- New Method: Initialization with Immediate Defense Arming ---
+    # =================================================================
     async def initialize_pipeline(self, playwright_instance) -> None:
         """Launches the sandboxed browser environment and configures human traits."""
         print("🌐 Launching automated browser instance...")
@@ -158,6 +159,60 @@ class GoodreadsScraper:
         except Exception as e:
             print(f"❌ [Interaction Error] Failed to interact with filter section: {str(e)}")
             return False
+        
+    # --- New Method: Filter Configuration Matrix ---
+    # =================================================================
+    async def apply_review_filters(self, page):
+        """
+        Interacts with the open filters overlay menu to configure:
+        Sort order -> Newest, Edition -> This Edition, Language -> English.
+        """
+        print("[Filters Engine] Processing options configuration matrix...")
+        
+        try:
+            # 1. First, wait explicitly for the modal container layout to completely render in view
+            await page.wait_for_selector(self.config.FILTERS_MODAL_SELECTOR, state="visible", timeout=60000)
+            
+            # 2. Select the 'Newest' Sort Order Option
+            # We try to click the exact radio node, fallback on text matching if overlaid by UI layout decorators
+            try:
+                await page.click(self.config.RADIO_NEWEST_SELECTOR, timeout=20000)
+            except TimeoutError:
+                await page.click("text=Newest first")
+            print("[Filters Engine] Sort Order updated to 'Newest'.")
+            await asyncio.sleep(random.uniform(0.3, 0.7)) # Human-like toggle pause
+            
+            # 3. Select the 'Reviews of this edition' Option
+            try:
+                await page.click(self.config.RADIO_THIS_EDITION_SELECTOR, timeout=20000)
+            except TimeoutError:
+                await page.click("text=Reviews of this edition") # Alternate text label match
+            print("[Filters Engine] Context constrained to current text edition.")
+            await asyncio.sleep(random.uniform(0.3, 0.7))
+            
+            # 4. Select the 'English' Language Option
+            try:
+                await page.click(self.config.RADIO_ENGLISH_SELECTOR, timeout=20000)
+            except TimeoutError:
+                await page.click("text=English (25683)")
+            print("[Filters Engine] Language filter locked to English strings.")
+            await asyncio.sleep(random.uniform(0.5, 1.0))
+            
+            # 5. Execute Action Submit & Handle Network Re-evaluations
+            print("[Filters Engine] Ready to commit. Dispatching apply request...")
+            
+            # Combine the button click event while simultaneously waiting for network responses to fire up
+            async with page.expect_navigation(wait_until="domcontentloaded", timeout=15000):
+                await page.click(self.config.APPLY_FILTERS_BUTTON_SELECTOR)
+                
+            print("[Filters Engine] Filters applied successfully! Page loading updated sequence...")
+            
+            # Add a strategic baseline pause to let AJAX elements redraw the dynamic view cards
+            await asyncio.sleep(random.uniform(2.0, 4.0))
+            
+        except Exception as e:
+            print(f"[CRITICAL WARNING] Failed to cleanly execute filters matrix setup: {e}")
+            # Secondary fallback: Take a screenshot or carry forward without crashing batch orchestration loop
 
 
 # =====================================================================
@@ -206,9 +261,11 @@ async def main():
                     
                     if filter_success:
                         print(f"✅ [Milestone] Filter menu opened successfully for book: '{book_title}'")
-                        # (Next developmental checkpoint will introduce options modal interaction here)
+                        # NEW LAYER INTEGRATION: Execute choices matrix (Sort order, Edition, Language)
+                        await scraper.apply_review_filters(scraper.page)
                     else:
                         print(f"❌ [Milestone Failed] Could not trigger filter menu for book: '{book_title}'")
+
                 else:
                     print(f"❌ Navigation Failed! Skipping execution loops for this target record.")
                 
