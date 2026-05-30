@@ -12,7 +12,7 @@ class PipelineConfig:
     RAW_DATA_DIR = ROOT_DIR / "data" / "raw"
 
     # --- New Scope Constraints (Variable updates live here!) ---
-    MAX_BOOKS_TO_PROCESS = 1       # Small test batch throttle variable
+    MAX_BOOKS_TO_PROCESS = 3       # Small test batch throttle variable
     TARGET_REVIEWS_PER_BOOK = 100  # Exit criteria per book
     
     # Anti-Bot & Network Defense Settings
@@ -23,7 +23,7 @@ class PipelineConfig:
     )
     
     # Targeted Goodreads Elements
-    POPUP_CLOSE_SELECTOR = ".Overlay__close"
+    POPUP_CLOSE_SELECTOR = "div[role='dialog']:has-text('Sign up') .Overlay__close, div[role='dialog']:has-text('Sign in') .Overlay__close"
     
     # Strict Network Latency Guardrails (in Milliseconds)
     PRIMARY_TIMEOUT_MS = 60000  # 60 Seconds
