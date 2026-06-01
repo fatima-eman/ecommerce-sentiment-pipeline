@@ -22,7 +22,7 @@ class PipelineConfig:
         "Chrome/120.0.0.0 Safari/537.36"
     )
     
-    # Targeted Goodreads Elements
+    # Targeted Goodreads Elements   
     POPUP_CLOSE_SELECTOR = "div[role='dialog']:has-text('Sign up') .Overlay__close, div[role='dialog']:has-text('Sign in') .Overlay__close"
     
     # Strict Network Latency Guardrails (in Milliseconds)
@@ -30,19 +30,14 @@ class PipelineConfig:
     FALLBACK_TIMEOUT_MS = 90000 # 90 Seconds
 
 
-    # --- CSS Selectors for Filters Modal ---
-
-    # REFACTOR: Look for the 'Filters' button context directly inside the ReviewFilters block
-    # This completely ignores whether intermediate parent divs change classes or layouts!
+# --- CSS Selectors for Filters Modal ---
     FILTER_BUTTON_SELECTOR = ".ReviewFilters button:has-text('Filters')"
-
-    # The parent modal overlay wrapper (if needed for scoping or explicit waiting)
-    FILTERS_MODAL_SELECTOR = "div.Overlay__content, div[role='dialog']"
+    FILTERS_MODAL_SELECTOR = "div.Overlay__window, div[role='dialog']"
     
-    # Specific input targeting matching your menu requirements
-    RADIO_NEWEST_SELECTOR = "input[type='radio'][value='default']"        # Standard Goodreads value for Newest sort
-    RADIO_THIS_EDITION_SELECTOR = "input[type='radio'][value='true']"    # Standard Goodreads value for filtering to current work edition
-    RADIO_ENGLISH_SELECTOR = "input[type='radio'][value='en']"           # Standard Goodreads ISO code value for English language
+    # REFACTORED: Target the user-facing text labels inside the modal layout context
+    RADIO_NEWEST_SELECTOR = ".Overlay__window label:has-text('Newest first'), .Overlay__window label:has(input[value='default'])"
+    RADIO_THIS_EDITION_SELECTOR = ".Overlay__window label:has-text('Reviews of this edition'), .Overlay__window label:has(input[value='true'])"
+    RADIO_ENGLISH_SELECTOR = ".Overlay__window label:has-text('English'), .Overlay__window label:has(input[value='en'])"
     
-    # Apply filters action confirmation
-    APPLY_FILTERS_BUTTON_SELECTOR = "button.Button--primary, button[type='submit']"
+    # Robustly scope the action items within the overlay control wrapper
+    APPLY_FILTERS_BUTTON_SELECTOR = ".Overlay__actions button:has-text('Apply'), .Overlay__footer button.Button--primary"

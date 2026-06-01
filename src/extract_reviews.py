@@ -51,7 +51,9 @@ class GoodreadsScraper:
         self.browser = await playwright_instance.chromium.launch(headless=False)
         
         # Inject standard human fingerprint (User Agent) to clear low-level firewalls
-        self.context = await self.browser.new_context(user_agent=self.config.USER_AGENT)
+        self.context = await self.browser.new_context(
+            user_agent=self.config.USER_AGENT
+        )
         self.page = await self.context.new_page()
         
         # IMMEDIATELY arm the pop-up defense system right after launching the page
@@ -162,7 +164,7 @@ class GoodreadsScraper:
         
     # --- New Method: Filter Configuration Matrix ---
     # =================================================================
-    async def apply_review_filters(self, page):
+    async def apply_review_filters(self, page)-> bool:
         """
         Interacts with the open filters overlay menu to configure:
         Sort order -> Newest, Edition -> This Edition, Language -> English.
@@ -170,9 +172,11 @@ class GoodreadsScraper:
         print("[Filters Engine] Processing options configuration matrix...")
         
         try:
-            # 1. First, wait explicitly for the modal container layout to completely render in view
-            await page.wait_for_selector(self.config.FILTERS_MODAL_SELECTOR, state="visible", timeout=60000)
-            
+        
+            # 1. Wait explicitly for the modal container overlay to render completely in view
+            # Use the locator API for lazy evaluation and compound checks
+            modal_locator = page.locator(self.config.FILTERS_MODAL_SELECTOR)
+            await modal_locator.wait_for(state="visible", timeout=30000)
             # 2. Select the 'Newest' Sort Order Option
             # We try to click the exact radio node, fallback on text matching if overlaid by UI layout decorators
             try:
@@ -194,25 +198,43 @@ class GoodreadsScraper:
             try:
                 await page.click(self.config.RADIO_ENGLISH_SELECTOR, timeout=20000)
             except TimeoutError:
-                await page.click("text=English (25683)")
+                await page.click("text=English")
             print("[Filters Engine] Language filter locked to English strings.")
             await asyncio.sleep(random.uniform(0.5, 1.0))
             
             # 5. Execute Action Submit & Handle Network Re-evaluations
-            print("[Filters Engine] Ready to commit. Dispatching apply request...")
+            print("[Filters Engine] Enforcing programmatic internal scroll to uncover action footer...")
+            await modal_locator.evaluate("el => el.scrollTo(0, el.scrollHeight)")
+        
+            # Give the UI layout state machine a brief humanized heartbeat to redraw elements
+            await asyncio.sleep(random.uniform(0.6, 1.2))
             
-            # Combine the button click event while simultaneously waiting for network responses to fire up
-            async with page.expect_navigation(wait_until="domcontentloaded", timeout=15000):
-                await page.click(self.config.APPLY_FILTERS_BUTTON_SELECTOR)
+            # 3. Target the Action Apply Button with a resilient fallback mechanism
+            # If your strict selector string fails, we use a role fallback strategy to guarantee matching
+            apply_button = page.locator(self.config.APPLY_FILTERS_BUTTON_SELECTOR).or_(
+                page.get_by_role("button", name="Apply")
+            ).or_(
+                page.locator("div.overlay__actions button")
+            )
+            
+            print("[Filters Engine] Ready to commit settings. Dispatching apply event...")
+            await apply_button.wait_for(state="visible", timeout=15000)
+            await apply_button.click(force=True)
                 
-            print("[Filters Engine] Filters applied successfully! Page loading updated sequence...")
+            print("[Filters Engine] Filters applied successfully! Layout sequence updated.")
+            # FIX: Instead of checking page navigation, ensure the modal dismisses itself successfully
+            try:
+                await modal_locator.wait_for(state="hidden", timeout=10000)
+                print("[Filters Engine] Filters modal closed. Layout sequence updated.")
+            except TimeoutError:
+                print("[Filters Engine] Warning: Modal did not transition to hidden state, proceeding anyway.")
             
-            # Add a strategic baseline pause to let AJAX elements redraw the dynamic view cards
-            await asyncio.sleep(random.uniform(2.0, 4.0))
-            
+            # Baseline pacing delay to allow AJAX elements to cleanly fetch and redraw new review items
+            await asyncio.sleep(random.uniform(1.5, 3.0))
+            return True
         except Exception as e:
-            print(f"[CRITICAL WARNING] Failed to cleanly execute filters matrix setup: {e}")
-            # Secondary fallback: Take a screenshot or carry forward without crashing batch orchestration loop
+            print(f"❌ [Filters Engine Error] Critical failure during configuration phase: {str(e)}")
+            raise e
 
 
 # =====================================================================
@@ -262,7 +284,11 @@ async def main():
                     if filter_success:
                         print(f"✅ [Milestone] Filter menu opened successfully for book: '{book_title}'")
                         # NEW LAYER INTEGRATION: Execute choices matrix (Sort order, Edition, Language)
-                        await scraper.apply_review_filters(scraper.page)
+                        filters_applied=await scraper.apply_review_filters(scraper.page)
+                        if filters_applied:
+                            print(f"✅ [Milestone] Filters applied successfully for book: '{book_title}'")
+                        else: 
+                            print(f"❌ [Milestone Failed] Filter configuration failed for book: '{book_title}'")
                     else:
                         print(f"❌ [Milestone Failed] Could not trigger filter menu for book: '{book_title}'")
 
