@@ -10,10 +10,11 @@ class PipelineConfig:
     ROOT_DIR = Path(__file__).resolve().parents[1]
     QUEUE_CSV_PATH = ROOT_DIR / "books_queue.csv"
     RAW_DATA_DIR = ROOT_DIR / "data" / "raw"
+    PROCESSED_DATA_DIR = ROOT_DIR / "data" / "processed"
 
     # --- New Scope Constraints (Variable updates live here!) ---
-    MAX_BOOKS_TO_PROCESS = 3       # Small test batch throttle variable
-    TARGET_REVIEWS_PER_BOOK = 100  # Exit criteria per book
+    MAX_BOOKS_TO_PROCESS = 200      # Small test batch throttle variable
+    TARGET_REVIEWS_PER_BOOK = 1000  # Exit criteria per book
     
     # Anti-Bot & Network Defense Settings
     USER_AGENT = (
@@ -41,3 +42,19 @@ class PipelineConfig:
     
     # Robustly scope the action items within the overlay control wrapper
     APPLY_FILTERS_BUTTON_SELECTOR = ".Overlay__actions button:has-text('Apply'), .Overlay__footer button.Button--primary"
+
+
+# --- NEW: Data Extraction Selectors (Reviews & Pagination) ---
+    # =================================================================
+    # Targets the outermost container for each individual review
+    REVIEW_CARD_SELECTOR = "article.ReviewCard"
+    
+    # Scoped inside REVIEW_CARD_SELECTOR to find the reviewer's profile link
+    REVIEWER_LINK_SELECTOR = "a[href*='/user/show/']"
+    
+    # Scoped inside REVIEW_CARD_SELECTOR to find the raw text container
+    REVIEW_TEXT_SELECTOR = "section.ReviewText__content"
+    
+    # Targets the Next Page button within the reviews pagination block
+    # Targets the "More reviews and ratings >" button based on exact aria-label from the DOM
+    NEXT_PAGE_BUTTON_SELECTOR = "a[aria-label='Tap to show more reviews and ratings']"

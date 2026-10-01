@@ -6,3 +6,6 @@ venv/
 books_queue.csv
 Notes.md
 make_tree.py
+rough.md
+transform_reviews.py
+

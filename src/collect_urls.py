@@ -90,3 +90,4 @@ def scrape_urls():
 
 if __name__ == "__main__":
     scrape_urls()
+    
